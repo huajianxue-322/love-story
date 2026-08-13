@@ -628,6 +628,7 @@
 
   /* ---------- 主同步流程 ---------- */
   var syncing = false;
+  var lastSyncAuthError = false;
   function sync(){
     if (syncing) return Promise.resolve();
     syncing = true;
@@ -657,8 +658,13 @@
     }).then(function(){
       setSync("ok", "已同步 " + timeStr() + "（点击刷新）");
       syncing = false;
-    }).catch(function(){
-      setSync("err", "同步失败，点击重试");
+    }).catch(function(err){
+      lastSyncAuthError = !!(err && err.message && err.message.indexOf("401") >= 0);
+      if (lastSyncAuthError){
+        setSync("err", "钥匙已失效，点击重新设置");
+      } else {
+        setSync("err", "同步失败，点击重试");
+      }
       syncing = false;
     });
   }
@@ -1035,6 +1041,7 @@
   /* ---------- 同步触发 ---------- */
   syncStatusEl.addEventListener("click", function(){
     if (!getToken()){ showTokenSetup(); return; }
+    if (lastSyncAuthError){ showTokenSetup(); return; }
     sync();
   });
   setInterval(function(){ sync(); }, 30000);
