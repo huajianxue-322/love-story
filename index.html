@@ -452,13 +452,25 @@
   function load(key, fallback){ try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
   function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); return true; }catch(e){ return false; } }
 
+  /* 历史遗留清理：内置墓碑（防止旧版页面把已删照片 92938 反复推回云端）。
+     任何新版设备加载后都会带此标记，合并时过滤该照片并恢复云端墓碑。 */
+  var SEED_TOMBSTONES = [
+    { id:92938, type:"photos", updatedAt:1786604100000 }
+  ];
+
   var state = {
     timeline: load(LS.timeline, []),
     photos: load(LS.photos, []),
     notes: load(LS.notes, []),
     diary: load(LS.diary, []),
     foods: load(LS.foods, []),
-    deleted: load(LS.deleted, [])
+    deleted: (function(){
+      var d = load(LS.deleted, []);
+      SEED_TOMBSTONES.forEach(function(s){
+        if (!d.some(function(x){ return x.type === s.type && x.id === s.id; })) d.push(s);
+      });
+      return d;
+    })()
   };
 
   /* 首次使用（本地没有任何数据）时，用云端模板填充 */
