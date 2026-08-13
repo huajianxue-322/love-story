@@ -561,6 +561,19 @@
       return r.json();
     });
   }
+  /* 删除云端文件（先取 sha 再 DELETE，失败静默——孤儿文件无害） */
+  function ghDelete(path){
+    return ghGet(path).then(function(r){
+      return fetch(API + encodeURIComponent(path), {
+        method: "DELETE",
+        headers: ghHeaders(),
+        body: JSON.stringify({ message: "delete file", sha: r.sha })
+      }).then(function(r){
+        if (!r.ok) throw new Error("DEL " + path + " -> " + r.status);
+        return r.json();
+      });
+    });
+  }
   function b64encode(str){
     if (typeof btoa === "function") return btoa(unescape(encodeURIComponent(str)));
     // 兼容非浏览器环境
@@ -910,6 +923,19 @@
     modal.showModal();
   }
   function closeModal(){ modal.close(); }
+  /* 删除确认框 */
+  function confirmDelete(title, message, onYes){
+    openModal(
+      '<h3 style="color:var(--rose-deep)">' + esc(title) + '</h3>' +
+      '<div class="field"><p style="font-size:14px;color:var(--ink-soft);line-height:1.9">' + message + '</p></div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn ghost" id="confirmNo">再想想</button>' +
+        '<button class="btn solid" id="confirmYes" style="background:var(--rose-deep);border-color:var(--rose-deep)">确定删除</button>' +
+      '</div>'
+    );
+    $("confirmNo").addEventListener("click", function(){ closeModal(); });
+    $("confirmYes").addEventListener("click", function(){ closeModal(); onYes(); });
+  }
 
   /* ---------- 时间线表单 ---------- */
   $("addTimelineBtn").addEventListener("click", function(){
@@ -1071,38 +1097,75 @@
     }, 90);
   });
 
-  /* ---------- 删除委托（删除时记录墓碑，防止合并复活） ---------- */
+  /* ---------- 删除委托（确认 + 墓碑 + 云端文件清理） ---------- */
   function tombstone(id, type){
     state.deleted.unshift({ id:id, type:type, updatedAt:Date.now() });
+  }
+  function doDeleteTimeline(id){
+    tombstone(id, "timeline");
+    state.timeline = state.timeline.filter(function(t){ return t.id !== id; });
+    afterLocalChange(); renderTimeline();
+  }
+  function doDeletePhoto(id){
+    var p = state.photos.filter(function(x){ return x.id === id; })[0];
+    tombstone(id, "photos");
+    state.photos = state.photos.filter(function(p2){ return p2.id !== id; });
+    try{ localStorage.removeItem("love_photo_cache_" + id); }catch(err){}
+    afterLocalChange(); renderGallery();
+    if (p && p.path){ ghDelete(p.path).catch(function(){}); }
+  }
+  function doDeleteNote(id){
+    tombstone(id, "notes");
+    state.notes = state.notes.filter(function(n){ return n.id !== id; });
+    afterLocalChange(); renderNotes();
+  }
+  function doDeleteDiary(id){
+    tombstone(id, "diary");
+    state.diary = state.diary.filter(function(d){ return d.id !== id; });
+    afterLocalChange(); renderDiary();
+  }
+  function doDeleteFood(id){
+    tombstone(id, "foods");
+    state.foods = state.foods.filter(function(f){ return f.id !== id; });
+    afterLocalChange(); renderFoods();
+  }
+  function preview(str, n){
+    str = String(str || "").replace(/\s+/g, " ").trim();
+    return str.length > n ? str.slice(0, n) + "…" : str;
   }
   document.addEventListener("click", function(e){
     var el;
     if (el = e.target.closest(".t-del")){
       var id = Number(el.getAttribute("data-id"));
-      tombstone(id, "timeline");
-      state.timeline = state.timeline.filter(function(t){ return t.id !== id; });
-      afterLocalChange(); renderTimeline();
+      var t = state.timeline.filter(function(x){ return x.id === id; })[0];
+      confirmDelete("删除这条记录？",
+        '「<b style="color:var(--ink)">' + esc(t ? t.title : "") + '</b>」将从时间线永久删除，无法恢复。',
+        function(){ doDeleteTimeline(id); });
     } else if (el = e.target.closest(".ph-del")){
       var pid = Number(el.getAttribute("data-id"));
-      tombstone(pid, "photos");
-      state.photos = state.photos.filter(function(p){ return p.id !== pid; });
-      try{ localStorage.removeItem("love_photo_cache_" + pid); }catch(err){}
-      afterLocalChange(); renderGallery();
+      var p = state.photos.filter(function(x){ return x.id === pid; })[0];
+      confirmDelete("删除这张照片？",
+        p && p.cap ? '「' + esc(p.cap) + '」这张照片将连同云端文件一起永久删除，无法恢复。'
+                   : '这张照片将连同云端文件一起永久删除，无法恢复。',
+        function(){ doDeletePhoto(pid); });
     } else if (el = e.target.closest(".n-del")){
       var nidv = Number(el.getAttribute("data-id"));
-      tombstone(nidv, "notes");
-      state.notes = state.notes.filter(function(n){ return n.id !== nidv; });
-      afterLocalChange(); renderNotes();
+      var n = state.notes.filter(function(x){ return x.id === nidv; })[0];
+      confirmDelete("撕掉这张便签？",
+        '「' + esc(preview(n ? n.text : "", 40)) + '」将从便签墙永久删除，无法恢复。',
+        function(){ doDeleteNote(nidv); });
     } else if (el = e.target.closest(".e-del")){
       var did = Number(el.getAttribute("data-id"));
-      tombstone(did, "diary");
-      state.diary = state.diary.filter(function(d){ return d.id !== did; });
-      afterLocalChange(); renderDiary();
+      var d = state.diary.filter(function(x){ return x.id === did; })[0];
+      confirmDelete("删除这篇日记？",
+        '「' + esc(preview(d ? d.text : "", 40)) + '」将从日记本永久删除，无法恢复。',
+        function(){ doDeleteDiary(did); });
     } else if (el = e.target.closest(".f-del")){
       var fid = Number(el.getAttribute("data-id"));
-      tombstone(fid, "foods");
-      state.foods = state.foods.filter(function(f){ return f.id !== fid; });
-      afterLocalChange(); renderFoods();
+      var f = state.foods.filter(function(x){ return x.id === fid; })[0];
+      confirmDelete("移除这个选项？",
+        '「' + esc(f ? f.name : "") + '」将从今天吃什么的清单中移除。',
+        function(){ doDeleteFood(fid); });
     }
   });
 
