@@ -95,6 +95,17 @@
   .counter .next{margin-top:10px;font-size:14px;color:var(--caramel);letter-spacing:.06em}
   .counter .next b{font-family:var(--num);font-weight:700;color:var(--rose-deep)}
 
+  .sync-status{
+    margin:14px auto 0;max-width:640px;display:flex;justify-content:center;align-items:center;gap:6px;
+    font-size:12.5px;letter-spacing:.08em;color:var(--ink-faint);
+    cursor:pointer;user-select:none;padding:6px 0;
+  }
+  .sync-status .dot{width:8px;height:8px;border-radius:50%;background:var(--sage);display:inline-block;transition:background .3s ease}
+  .sync-status.busy .dot{background:var(--yellow);animation:blink 1s ease-in-out infinite}
+  .sync-status.err .dot{background:var(--rose-deep)}
+  .sync-status.ok .dot{background:var(--sage)}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+
   .scroll-hint{margin-top:34px;color:var(--ink-faint);font-size:13px;letter-spacing:.3em;animation:bob 2.4s ease-in-out infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
 
@@ -118,6 +129,7 @@
   .btn.solid:hover{background:#a94c52}
   .btn.ghost{border-color:var(--line);color:var(--ink-soft);background:transparent}
   .btn.ghost:hover{background:var(--paper-2);color:var(--ink);transform:none;box-shadow:none}
+  .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
   .add-row{display:flex;justify-content:flex-end;margin-bottom:22px}
 
   .empty{text-align:center;color:var(--ink-faint);font-size:15px;padding:26px 0;letter-spacing:.08em}
@@ -288,6 +300,7 @@
       <div class="tick" id="tick">00 : 00 : 00</div>
       <div class="next" id="nextMilestone"></div>
     </div>
+    <div class="sync-status" id="syncStatus" title="点击立即同步"><span class="dot"></span><span id="syncText">正在连接云端…</span></div>
     <div class="scroll-hint">↓ 向下翻阅我们的故事</div>
   </header>
 
@@ -346,6 +359,20 @@
 (function(){
   "use strict";
 
+  /* =========================================================
+     云端配置：GitHub 仓库作为共享数据库
+     （同步钥匙由用户保存在各自浏览器中，不写入本文件）
+     ========================================================= */
+  var GITHUB = {
+    owner: "huajianxue-322",
+    repo: "love-story",
+    dataPath: "love-data/data.json",
+    photoDir: "love-data/photos"
+  };
+  var TOKEN_KEY = "love_github_token";
+  function getToken(){ try{ return localStorage.getItem(TOKEN_KEY) || ""; }catch(e){ return ""; } }
+  var API = "https://api.github.com/repos/" + GITHUB.owner + "/" + GITHUB.repo + "/contents/";
+
   /* ---------- 数据与持久化 ---------- */
   var START = new Date(2026, 5, 6, 0, 0, 0);   // 2026-06-06
   var LS = {
@@ -354,22 +381,31 @@
     notes:    "love_notes_v1",
     diary:    "love_diary_v1"
   };
-  var PHOTO_BUDGET = 4 * 1024 * 1024; // localStorage 照片总预算 ~4MB，留余量
 
   function load(key, fallback){ try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
   function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); return true; }catch(e){ return false; } }
 
   var state = {
-    timeline: load(LS.timeline, [
-      { id:1, date:"2026-06-06", title:"我们在一起了", text:"故事的开始。这一天起，两个人的名字写在了一起。", future:false },
-      { id:2, date:"", title:"我们的下一次", text:"在这里记下你们的第一个纪念日、第一次旅行、第一张合照……", future:true }
-    ]),
+    timeline: load(LS.timeline, []),
     photos: load(LS.photos, []),
-    notes: load(LS.notes, [
-      { id:1, text:"要一起去看海、看雪、看很多很多次日落。", date:"2026.06.06" }
-    ]),
+    notes: load(LS.notes, []),
     diary: load(LS.diary, [])
   };
+
+  /* 首次使用（本地没有任何数据）时，用云端模板填充 */
+  function seedIfEmpty(){
+    var any = state.timeline.length || state.photos.length || state.notes.length || state.diary.length;
+    if (any) return;
+    var t0 = 1780473600000; // 2026-06-06
+    state.timeline = [
+      { id:1, date:"2026-06-06", title:"我们在一起了", text:"故事的开始。这一天起，两个人的名字写在了一起。", future:false, updatedAt:t0 },
+      { id:2, date:"", title:"我们的下一次", text:"在这里记下你们的第一个纪念日、第一次旅行、第一张合照……", future:true, updatedAt:t0 }
+    ];
+    state.notes = [
+      { id:1, text:"要一起去看海、看雪、看很多很多次日落。", date:"2026.06.06", updatedAt:t0 }
+    ];
+  }
+  seedIfEmpty();
 
   var uid = Date.now() % 100000;
   function nid(){ return ++uid; }
@@ -377,6 +413,7 @@
   function fmtDate(d){ return d.getFullYear() + "." + pad(d.getMonth()+1) + "." + pad(d.getDate()); }
   function isoDate(d){ return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); }
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function timeStr(){ var n = new Date(); return pad(n.getHours()) + ":" + pad(n.getMinutes()); }
   var $ = function(id){ return document.getElementById(id); };
 
   /* ---------- 恋爱计时 ---------- */
@@ -413,6 +450,212 @@
   }
   tick();
   setInterval(tick, 1000);
+
+  /* =========================================================
+     云端同步层（GitHub API）
+     ========================================================= */
+  function ghHeaders(){
+    return {
+      "Authorization": "Bearer " + getToken(),
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
+  }
+  function ghGet(path){
+    return fetch(API + encodeURIComponent(path), { headers: ghHeaders() }).then(function(r){
+      if (!r.ok) throw new Error("GET " + path + " -> " + r.status);
+      return r.json();
+    });
+  }
+  function ghPut(path, base64Content, sha){
+    var body = { message: "sync love data", content: base64Content };
+    if (sha) body.sha = sha;
+    return fetch(API + encodeURIComponent(path), {
+      method: "PUT",
+      headers: ghHeaders(),
+      body: JSON.stringify(body)
+    }).then(function(r){
+      if (r.status === 409) { var e = new Error("conflict"); e.conflict = true; throw e; }
+      if (!r.ok) throw new Error("PUT " + path + " -> " + r.status);
+      return r.json();
+    });
+  }
+  function b64encode(str){
+    if (typeof btoa === "function") return btoa(unescape(encodeURIComponent(str)));
+    // 兼容非浏览器环境
+    var bytes = new TextEncoder().encode(str), bin = "";
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  /* 读取云端数据（含文件 sha） */
+  function fetchRemote(){
+    return ghGet(GITHUB.dataPath).then(function(r){
+      var obj;
+      try { obj = JSON.parse(decodeURIComponent(escape(atob(r.content)))); }
+      catch(e){ try { obj = JSON.parse(atob(r.content)); }catch(e2){ obj = { timeline:[], photos:[], notes:[], diary:[] }; } }
+      obj._sha = r.sha;
+      return obj;
+    }).catch(function(err){
+      if (err.message && err.message.indexOf("404") >= 0) return null; // 云端还没有数据
+      throw err;
+    });
+  }
+
+  /* 合并两个数组：按 id 并集，updatedAt 新者胜 */
+  function mergeArr(local, remote){
+    var map = {};
+    (remote || []).forEach(function(x){ map[x.id] = x; });
+    (local || []).forEach(function(x){
+      if (x.id === undefined) return;
+      if (!map[x.id]) map[x.id] = x;
+      else if ((x.updatedAt || 0) > (map[x.id].updatedAt || 0)) map[x.id] = x;
+    });
+    return Object.keys(map).map(function(k){ return map[k]; });
+  }
+  function mergeData(local, remote){
+    return {
+      timeline: mergeArr(local.timeline, remote.timeline),
+      photos: mergeArr(local.photos, remote.photos),
+      notes: mergeArr(local.notes, remote.notes),
+      diary: mergeArr(local.diary, remote.diary)
+    };
+  }
+
+  /* 稳定序列化（key 排序），用于判断内容是否变化 */
+  function stableJSON(o){
+    if (o === null || typeof o !== "object") return JSON.stringify(o);
+    if (Array.isArray(o)) return "[" + o.map(stableJSON).join(",") + "]";
+    return "{" + Object.keys(o).sort().map(function(k){ return JSON.stringify(k) + ":" + stableJSON(o[k]); }).join(",") + "}";
+  }
+
+  /* 把本地有 data 但还没上传到云端的照片传上去 */
+  function uploadPendingPhotos(merged){
+    var pending = merged.photos.filter(function(p){ return p.data && !p.path; });
+    if (!pending.length) return Promise.resolve();
+    var tasks = pending.map(function(p){
+      var path = GITHUB.photoDir + "/" + p.id + ".jpg";
+      var b64 = p.data.indexOf(",") >= 0 ? p.data.split(",")[1] : p.data;
+      // 先查文件是否已存在（重试场景）
+      return ghGet(path).then(function(r){ return r.sha; }).catch(function(){ return undefined; })
+        .then(function(sha){
+          return ghPut(path, b64, sha);
+        }).then(function(){
+          p.path = path;
+          try{ localStorage.setItem("love_photo_cache_" + p.id, p.data); }catch(e){}
+          delete p.data;
+        });
+    });
+    return Promise.all(tasks);
+  }
+
+  /* 保存到云端（带冲突重试） */
+  function pushRemote(merged, sha, tries){
+    tries = tries || 0;
+    return ghPut(GITHUB.dataPath, b64encode(JSON.stringify(merged)), sha).catch(function(err){
+      if (err.conflict && tries < 3){
+        return fetchRemote().then(function(remote){
+          if (!remote) return pushRemote(merged, undefined, tries + 1);
+          var newer = mergeData(localStateSnapshot(), remote);
+          return uploadPendingPhotos(newer).then(function(){
+            return pushRemote(newer, remote._sha, tries + 1);
+          });
+        });
+      }
+      throw err;
+    });
+  }
+  function localStateSnapshot(){
+    return { timeline: state.timeline, photos: state.photos, notes: state.notes, diary: state.diary };
+  }
+
+  /* 应用合并结果到本地 */
+  function applyMerged(merged){
+    state.timeline = merged.timeline;
+    state.photos = merged.photos;
+    state.notes = merged.notes;
+    state.diary = merged.diary;
+    save(LS.timeline, state.timeline);
+    save(LS.notes, state.notes);
+    save(LS.diary, state.diary);
+    // photos 存元数据（不含 data 大字段）
+    var meta = state.photos.map(function(p){ var c = {}; c.id = p.id; c.cap = p.cap || ""; c.path = p.path || ""; c.updatedAt = p.updatedAt || 0; return c; });
+    save(LS.photos, meta);
+    renderAll();
+  }
+
+  /* ---------- 同步状态指示 ---------- */
+  var syncStatusEl = $("syncStatus");
+  function setSync(kind, text){
+    syncStatusEl.className = "sync-status " + kind;
+    $("syncText").textContent = text;
+  }
+
+  /* ---------- 主同步流程 ---------- */
+  var syncing = false;
+  function sync(){
+    if (syncing) return Promise.resolve();
+    syncing = true;
+    setSync("busy", "正在同步…");
+    var started = Date.now();
+    return fetchRemote().then(function(remote){
+      var local = localStateSnapshot();
+      var merged;
+      if (!remote){
+        // 云端还没有数据：把本地（含模板）推上去
+        merged = { timeline: local.timeline, photos: local.photos, notes: local.notes, diary: local.diary };
+        return uploadPendingPhotos(merged).then(function(){
+          return pushRemote(merged, undefined).then(function(){ applyMerged(merged); });
+        });
+      }
+      merged = mergeData(local, remote);
+      return uploadPendingPhotos(merged).then(function(){
+        var changed = stableJSON({
+          timeline: merged.timeline.map(stripMeta), photos: merged.photos.map(stripMeta),
+          notes: merged.notes.map(stripMeta), diary: merged.diary.map(stripMeta)
+        }) !== stableJSON({
+          timeline: remote.timeline.map(stripMeta), photos: remote.photos.map(stripMeta),
+          notes: remote.notes.map(stripMeta), diary: remote.diary.map(stripMeta)
+        });
+        if (changed) return pushRemote(merged, remote._sha);
+      }).then(function(){ applyMerged(merged); });
+    }).then(function(){
+      setSync("ok", "已同步 " + timeStr() + "（点击刷新）");
+      syncing = false;
+    }).catch(function(){
+      setSync("err", "同步失败，点击重试");
+      syncing = false;
+    });
+  }
+  function stripMeta(o){
+    var c = {};
+    for (var k in o){ if (k !== "data") c[k] = o[k]; }
+    return c;
+  }
+
+  /* 本地修改后的快捷同步 */
+  function afterLocalChange(){
+    saveLocal();
+    sync();
+  }
+  function saveLocal(){
+    save(LS.timeline, state.timeline);
+    save(LS.notes, state.notes);
+    save(LS.diary, state.diary);
+    var meta = state.photos.map(function(p){ return { id:p.id, cap:p.cap||"", path:p.path||"", updatedAt:p.updatedAt||0 }; });
+    save(LS.photos, meta);
+  }
+
+  /* ---------- 照片读取（云端拉取 + 本地缓存） ---------- */
+  function photoCache(id){ try{ return localStorage.getItem("love_photo_cache_" + id); }catch(e){ return null; } }
+  function loadPhotoFromCloud(p, imgEl){
+    if (!p.path) return;
+    ghGet(p.path).then(function(r){
+      var dataUrl = "data:image/jpeg;base64," + r.content;
+      try{ localStorage.setItem("love_photo_cache_" + p.id, dataUrl); }catch(e){}
+      if (imgEl) imgEl.src = dataUrl;
+    }).catch(function(){});
+  }
 
   /* ---------- 渲染：时间线 ---------- */
   function renderTimeline(){
@@ -454,7 +697,7 @@
     if (!state.photos.length){
       box.innerHTML = [
         { cap:"我们的第一张照片" },{ cap:"第一次一起吃饭" },{ cap:"走过的风景" },
-        { cap:"合照", },{ cap:"那天天气很好" },{ cap:"未完待续…" }
+        { cap:"合照" },{ cap:"那天天气很好" },{ cap:"未完待续…" }
       ].map(function(p, i){
         var ph = '<div class="ph-placeholder">' + placeholderSVG(i) + '<span>' + esc(p.cap) + '</span></div>';
         return '<div class="polaroid"><div class="ph">' + ph + '</div><div class="cap">' + esc(p.cap) + '</div></div>';
@@ -463,16 +706,25 @@
       return;
     }
     box.innerHTML = state.photos.map(function(p, i){
+      var src = p.data || photoCache(p.id) || "";
+      var inner = src
+        ? '<img src="' + src + '" alt="' + esc(p.cap) + '" data-cap="' + esc(p.cap) + '" loading="lazy">'
+        : '<div class="ph-placeholder" data-phid="' + p.id + '">' + placeholderSVG(i) + '<span>加载照片…</span></div>';
       return (
         '<div class="polaroid">' +
-          '<div class="ph">' +
-            '<img src="' + p.data + '" alt="' + esc(p.cap) + '" data-cap="' + esc(p.cap) + '" loading="lazy">' +
+          '<div class="ph">' + inner +
             '<button class="ph-del" data-id="' + p.id + '" title="删除">✕</button>' +
           '</div>' +
           '<div class="cap">' + esc(p.cap) + '</div>' +
         '</div>'
       );
     }).join("");
+    // 无缓存照片：异步从云端拉取
+    state.photos.forEach(function(p){
+      if (p.data || photoCache(p.id)) return;
+      var phEl = box.querySelector('.ph-placeholder[data-phid="' + p.id + '"]');
+      loadPhotoFromCloud(p, phEl ? phEl.parentNode.querySelector("img") || null : null);
+    });
   }
 
   /* ---------- 渲染：便签 ---------- */
@@ -539,8 +791,8 @@
     $("saveTimeline").addEventListener("click", function(){
       var date = $("fDate").value, title = $("fTitle").value.trim(), text = $("fText").value.trim();
       if (!title){ $("fTitle").focus(); return; }
-      state.timeline.unshift({ id:nid(), date:date, title:title, text:text, future:false });
-      save(LS.timeline, state.timeline);
+      state.timeline.unshift({ id:nid(), date:date, title:title, text:text, future:false, updatedAt:Date.now() });
+      afterLocalChange();
       renderTimeline(); closeModal();
     });
   });
@@ -550,25 +802,27 @@
   $("photoInput").addEventListener("change", function(e){
     var files = Array.prototype.slice.call(e.target.files || []);
     if (!files.length) return;
-    var remaining = PHOTO_BUDGET - totalPhotoBytes();
-    if (remaining < 100 * 1024){ alert("本地存储快满了，请先删除一些旧照片再添加。"); this.value = ""; return; }
+    var btn = $("addPhotoBtn");
+    btn.disabled = true;
+    btn.textContent = "上传中…";
+    var pending = files.length;
     files.forEach(function(file){
-      if (!/^image\//.test(file.type)) return;
+      if (!/^image\//.test(file.type)){ pending--; if (!pending){ btn.disabled = false; btn.textContent = "✚ 添加照片"; } return; }
       readAndCompress(file, function(data){
         var cap = prompt("给这张照片写一句话：", "");
-        state.photos.push({ id:nid(), data:data, cap:cap === null ? "" : cap.trim() });
-        if (!save(LS.photos, state.photos)){
-          alert("照片保存失败（本地空间不足），已从列表移除，请删除部分旧照片。");
-          state.photos.pop();
+        var pid = nid();
+        state.photos.unshift({ id:pid, cap:(cap === null ? "" : cap.trim()), data:data, path:null, updatedAt:Date.now() });
+        pending--;
+        if (!pending){
+          btn.disabled = false;
+          btn.textContent = "✚ 添加照片";
+          afterLocalChange();
+          renderGallery();
         }
-        renderGallery();
       });
     });
     this.value = "";
   });
-  function totalPhotoBytes(){
-    return state.photos.reduce(function(sum, p){ return sum + (p.data ? p.data.length : 0); }, 0);
-  }
   function readAndCompress(file, cb){
     var reader = new FileReader();
     reader.onload = function(){
@@ -603,8 +857,8 @@
     $("saveNote").addEventListener("click", function(){
       var text = $("fNoteText").value.trim();
       if (!text) return;
-      state.notes.unshift({ id:nid(), text:text, date:fmtDate(new Date()) });
-      save(LS.notes, state.notes);
+      state.notes.unshift({ id:nid(), text:text, date:fmtDate(new Date()), updatedAt:Date.now() });
+      afterLocalChange();
       renderNotes(); closeModal();
     });
   });
@@ -637,8 +891,8 @@
     $("saveDiary").addEventListener("click", function(){
       var text = $("fDText").value.trim();
       if (!text) return;
-      state.diary.push({ id:nid(), date:$("fDDate").value || fmtDate(new Date()), mood:chosen, text:text });
-      save(LS.diary, state.diary);
+      state.diary.push({ id:nid(), date:$("fDDate").value || fmtDate(new Date()), mood:chosen, text:text, updatedAt:Date.now() });
+      afterLocalChange();
       renderDiary(); closeModal();
     });
   });
@@ -649,19 +903,20 @@
     if (el = e.target.closest(".t-del")){
       var id = Number(el.getAttribute("data-id"));
       state.timeline = state.timeline.filter(function(t){ return t.id !== id; });
-      save(LS.timeline, state.timeline); renderTimeline();
+      afterLocalChange(); renderTimeline();
     } else if (el = e.target.closest(".ph-del")){
       var pid = Number(el.getAttribute("data-id"));
       state.photos = state.photos.filter(function(p){ return p.id !== pid; });
-      save(LS.photos, state.photos); renderGallery();
+      try{ localStorage.removeItem("love_photo_cache_" + pid); }catch(err){}
+      afterLocalChange(); renderGallery();
     } else if (el = e.target.closest(".n-del")){
       var nidv = Number(el.getAttribute("data-id"));
       state.notes = state.notes.filter(function(n){ return n.id !== nidv; });
-      save(LS.notes, state.notes); renderNotes();
+      afterLocalChange(); renderNotes();
     } else if (el = e.target.closest(".e-del")){
       var did = Number(el.getAttribute("data-id"));
       state.diary = state.diary.filter(function(d){ return d.id !== did; });
-      save(LS.diary, state.diary); renderDiary();
+      afterLocalChange(); renderDiary();
     }
   });
 
@@ -678,8 +933,44 @@
   lightbox.addEventListener("click", function(){ lightbox.classList.remove("open"); });
   document.addEventListener("keydown", function(e){ if (e.key === "Escape") lightbox.classList.remove("open"); });
 
-  /* ---------- 初始渲染 ---------- */
+  /* ---------- 同步触发 ---------- */
+  syncStatusEl.addEventListener("click", function(){
+    if (!getToken()){ showTokenSetup(); return; }
+    sync();
+  });
+  setInterval(function(){ sync(); }, 30000);
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) sync(); });
+
+  /* ---------- 同步钥匙设置 ---------- */
+  function showTokenSetup(){
+    openModal(
+      '<h3>设置同步钥匙</h3>' +
+      '<div class="field"><p style="font-size:13.5px;color:var(--ink-soft);margin-bottom:10px;line-height:1.7">为了让两人的记录在云端互通，需要把 GitHub 同步钥匙粘贴到这里。<br>每台设备只需设置一次，钥匙只保存在这台设备的浏览器里。</p>' +
+      '<label>同步钥匙（github_pat_…）</label>' +
+      '<input type="text" id="fToken" placeholder="github_pat_xxxx" style="font-size:13px">' +
+      '<div class="hint">找不到钥匙？打开 github.com/settings/personal-access-tokens，复制「love-story-sync」那串</div></div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn solid" id="saveToken">保存并同步</button>' +
+      '</div>'
+    );
+    $("saveToken").addEventListener("click", function(){
+      var t = $("fToken").value.trim();
+      if (!t){ $("fToken").focus(); return; }
+      try{ localStorage.setItem(TOKEN_KEY, t); }catch(e){}
+      closeModal();
+      setSync("busy", "正在同步…");
+      sync();
+    });
+  }
+
+  /* ---------- 初始渲染 + 首次同步 ---------- */
   renderAll();
+  if (!getToken()){
+    setSync("err", "点击设置同步钥匙");
+    showTokenSetup();
+  } else {
+    sync();
+  }
 })();
 </script>
 </body>
