@@ -445,7 +445,8 @@
     photos:   "love_photos_v1",
     notes:    "love_notes_v1",
     diary:    "love_diary_v1",
-    foods:    "love_foods_v1"
+    foods:    "love_foods_v1",
+    deleted:  "love_deleted_v1"
   };
 
   function load(key, fallback){ try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
@@ -456,7 +457,8 @@
     photos: load(LS.photos, []),
     notes: load(LS.notes, []),
     diary: load(LS.diary, []),
-    foods: load(LS.foods, [])
+    foods: load(LS.foods, []),
+    deleted: load(LS.deleted, [])
   };
 
   /* 首次使用（本地没有任何数据）时，用云端模板填充 */
@@ -560,7 +562,7 @@
     return ghGet(GITHUB.dataPath).then(function(r){
       var obj;
       try { obj = JSON.parse(decodeURIComponent(escape(atob(r.content)))); }
-      catch(e){ try { obj = JSON.parse(atob(r.content)); }catch(e2){ obj = { timeline:[], photos:[], notes:[], diary:[], foods:[] }; } }
+      catch(e){ try { obj = JSON.parse(atob(r.content)); }catch(e2){ obj = { timeline:[], photos:[], notes:[], diary:[], foods:[], deleted:[] }; } }
       obj._sha = r.sha;
       return obj;
     }).catch(function(err){
@@ -569,24 +571,44 @@
     });
   }
 
-  /* 合并两个数组：按 id 并集，updatedAt 新者胜 */
-  function mergeArr(local, remote){
+  /* 墓碑合并：按 type+id 去重，updatedAt 新者胜 */
+  function mergeDeleted(local, remote){
     var map = {};
-    (remote || []).forEach(function(x){ map[x.id] = x; });
+    (remote || []).forEach(function(x){ map[x.type + "_" + x.id] = x; });
     (local || []).forEach(function(x){
-      if (x.id === undefined) return;
+      var k = x.type + "_" + x.id;
+      if (!map[k]) map[k] = x;
+      else if ((x.updatedAt || 0) > (map[k].updatedAt || 0)) map[k] = x;
+    });
+    return Object.keys(map).map(function(k){ return map[k]; });
+  }
+
+  /* 合并两个数组：排除墓碑中的条目，按 id 并集，updatedAt 新者胜 */
+  function mergeArr(local, remote, deleted, type){
+    var dead = {};
+    (deleted || []).forEach(function(x){
+      if (!type || x.type === type) dead[x.id] = true;
+    });
+    function filter(arr){
+      return (arr || []).filter(function(x){ return x.id !== undefined && !dead[x.id]; });
+    }
+    var map = {};
+    filter(remote).forEach(function(x){ map[x.id] = x; });
+    filter(local).forEach(function(x){
       if (!map[x.id]) map[x.id] = x;
       else if ((x.updatedAt || 0) > (map[x.id].updatedAt || 0)) map[x.id] = x;
     });
     return Object.keys(map).map(function(k){ return map[k]; });
   }
   function mergeData(local, remote){
+    var deleted = mergeDeleted(local.deleted, remote.deleted);
     return {
-      timeline: mergeArr(local.timeline, remote.timeline),
-      photos: mergeArr(local.photos, remote.photos),
-      notes: mergeArr(local.notes, remote.notes),
-      diary: mergeArr(local.diary, remote.diary),
-      foods: mergeArr(local.foods, remote.foods)
+      timeline: mergeArr(local.timeline, remote.timeline, deleted, "timeline"),
+      photos: mergeArr(local.photos, remote.photos, deleted, "photos"),
+      notes: mergeArr(local.notes, remote.notes, deleted, "notes"),
+      diary: mergeArr(local.diary, remote.diary, deleted, "diary"),
+      foods: mergeArr(local.foods, remote.foods, deleted, "foods"),
+      deleted: deleted
     };
   }
 
@@ -634,7 +656,7 @@
     });
   }
   function localStateSnapshot(){
-    return { timeline: state.timeline, photos: state.photos, notes: state.notes, diary: state.diary, foods: state.foods };
+    return { timeline: state.timeline, photos: state.photos, notes: state.notes, diary: state.diary, foods: state.foods, deleted: state.deleted };
   }
 
   /* 应用合并结果到本地 */
@@ -644,10 +666,12 @@
     state.notes = merged.notes;
     state.diary = merged.diary;
     state.foods = merged.foods;
+    state.deleted = merged.deleted;
     save(LS.timeline, state.timeline);
     save(LS.notes, state.notes);
     save(LS.diary, state.diary);
     save(LS.foods, state.foods);
+    save(LS.deleted, state.deleted);
     // photos 存元数据（不含 data 大字段）
     var meta = state.photos.map(function(p){ var c = {}; c.id = p.id; c.cap = p.cap || ""; c.path = p.path || ""; c.updatedAt = p.updatedAt || 0; return c; });
     save(LS.photos, meta);
@@ -681,13 +705,14 @@
       }
       merged = mergeData(local, remote);
       return uploadPendingPhotos(merged).then(function(){
-        var changed = stableJSON({
-          timeline: merged.timeline.map(stripMeta), photos: merged.photos.map(stripMeta),
-          notes: merged.notes.map(stripMeta), diary: merged.diary.map(stripMeta)
-        }) !== stableJSON({
-          timeline: remote.timeline.map(stripMeta), photos: remote.photos.map(stripMeta),
-          notes: remote.notes.map(stripMeta), diary: remote.diary.map(stripMeta)
-        });
+        var cmp = function(d){
+          return stableJSON({
+            timeline: (d.timeline||[]).map(stripMeta), photos: (d.photos||[]).map(stripMeta),
+            notes: (d.notes||[]).map(stripMeta), diary: (d.diary||[]).map(stripMeta),
+            foods: (d.foods||[]).map(stripMeta), deleted: (d.deleted||[]).map(stripMeta)
+          });
+        };
+        var changed = cmp(merged) !== cmp(remote);
         if (changed) return pushRemote(merged, remote._sha);
       }).then(function(){ applyMerged(merged); });
     }).then(function(){
@@ -719,6 +744,7 @@
     save(LS.notes, state.notes);
     save(LS.diary, state.diary);
     save(LS.foods, state.foods);
+    save(LS.deleted, state.deleted);
     var meta = state.photos.map(function(p){ return { id:p.id, cap:p.cap||"", path:p.path||"", updatedAt:p.updatedAt||0 }; });
     save(LS.photos, meta);
   }
@@ -1033,28 +1059,36 @@
     }, 90);
   });
 
-  /* ---------- 删除委托 ---------- */
+  /* ---------- 删除委托（删除时记录墓碑，防止合并复活） ---------- */
+  function tombstone(id, type){
+    state.deleted.unshift({ id:id, type:type, updatedAt:Date.now() });
+  }
   document.addEventListener("click", function(e){
     var el;
     if (el = e.target.closest(".t-del")){
       var id = Number(el.getAttribute("data-id"));
+      tombstone(id, "timeline");
       state.timeline = state.timeline.filter(function(t){ return t.id !== id; });
       afterLocalChange(); renderTimeline();
     } else if (el = e.target.closest(".ph-del")){
       var pid = Number(el.getAttribute("data-id"));
+      tombstone(pid, "photos");
       state.photos = state.photos.filter(function(p){ return p.id !== pid; });
       try{ localStorage.removeItem("love_photo_cache_" + pid); }catch(err){}
       afterLocalChange(); renderGallery();
     } else if (el = e.target.closest(".n-del")){
       var nidv = Number(el.getAttribute("data-id"));
+      tombstone(nidv, "notes");
       state.notes = state.notes.filter(function(n){ return n.id !== nidv; });
       afterLocalChange(); renderNotes();
     } else if (el = e.target.closest(".e-del")){
       var did = Number(el.getAttribute("data-id"));
+      tombstone(did, "diary");
       state.diary = state.diary.filter(function(d){ return d.id !== did; });
       afterLocalChange(); renderDiary();
     } else if (el = e.target.closest(".f-del")){
       var fid = Number(el.getAttribute("data-id"));
+      tombstone(fid, "foods");
       state.foods = state.foods.filter(function(f){ return f.id !== fid; });
       afterLocalChange(); renderFoods();
     }
