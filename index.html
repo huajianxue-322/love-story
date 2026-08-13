@@ -261,6 +261,20 @@
   .lightbox img{max-width:92vw;max-height:86vh;border-radius:10px;box-shadow:0 20px 70px rgba(0,0,0,.5)}
   .lightbox .lb-cap{position:absolute;bottom:26px;left:0;right:0;text-align:center;color:rgba(255,255,255,.85);font-family:var(--serif);letter-spacing:.1em;font-size:15px}
 
+  /* ---------- What to eat ---------- */
+  .food-decision{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius);padding:26px 20px 22px;text-align:center;box-shadow:var(--shadow);margin-bottom:18px}
+  .food-result{font-family:var(--serif);font-size:clamp(22px,4vw,30px);color:var(--rose-deep);min-height:46px;display:flex;align-items:center;justify-content:center;letter-spacing:.06em;margin-bottom:18px}
+  .food-result.pop{animation:foodpop .5s ease}
+  @keyframes foodpop{0%{transform:scale(.55);opacity:.2}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+  .food-pick{min-width:190px}
+  .food-add-row{display:flex;gap:10px;margin-bottom:20px}
+  .food-add-row input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:999px;background:var(--card);padding:11px 18px;font-family:var(--sans);font-size:15px;color:var(--ink);outline:none;min-height:44px;transition:border-color .15s ease}
+  .food-add-row input:focus{border-color:var(--rose)}
+  .food-list{display:flex;flex-wrap:wrap;gap:10px}
+  .food-tag{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 10px 7px 16px;font-size:14.5px;color:var(--ink);box-shadow:var(--shadow)}
+  .food-tag button{border:none;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:13px;width:26px;height:26px;border-radius:50%;line-height:1}
+  .food-tag button:hover{background:rgba(217,128,128,.15);color:var(--rose-deep)}
+
   /* ---------- Footer ---------- */
   footer{margin-top:90px;text-align:center;color:var(--ink-faint);font-size:13.5px;letter-spacing:.14em}
   footer .heart{color:var(--rose);font-size:16px;display:inline-block;animation:pulse 1.6s ease-in-out infinite}
@@ -343,6 +357,22 @@
     <div class="diary" id="diaryBox"></div>
   </section>
 
+  <!-- ============ WHAT TO EAT ============ -->
+  <section id="foods">
+    <div class="sec-head">
+      <span class="no">05</span><h2>今天吃什么</h2><span class="rule"></span>
+    </div>
+    <div class="food-decision">
+      <div class="food-result" id="foodResult">把想吃的都写上，点一下让我来选～</div>
+      <button class="btn solid food-pick" id="foodPickBtn">🎲 帮我决定！</button>
+    </div>
+    <div class="food-add-row">
+      <input type="text" id="foodInput" placeholder="输入想吃的，比如：火锅 / 烤鱼 / 那家日料…" maxlength="40">
+      <button class="btn" id="foodAddBtn">＋ 加入清单</button>
+    </div>
+    <div class="food-list" id="foodList"></div>
+  </section>
+
   <footer>
     <span class="heart">♥</span> 把平凡的日子，过成我们喜欢的样子 <span class="heart">♥</span><br>
     <small style="letter-spacing:.2em">夫垚 & 鋆曦 · 2026.6.6 起</small>
@@ -379,7 +409,8 @@
     timeline: "love_timeline_v1",
     photos:   "love_photos_v1",
     notes:    "love_notes_v1",
-    diary:    "love_diary_v1"
+    diary:    "love_diary_v1",
+    foods:    "love_foods_v1"
   };
 
   function load(key, fallback){ try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
@@ -389,7 +420,8 @@
     timeline: load(LS.timeline, []),
     photos: load(LS.photos, []),
     notes: load(LS.notes, []),
-    diary: load(LS.diary, [])
+    diary: load(LS.diary, []),
+    foods: load(LS.foods, [])
   };
 
   /* 首次使用（本地没有任何数据）时，用云端模板填充 */
@@ -493,7 +525,7 @@
     return ghGet(GITHUB.dataPath).then(function(r){
       var obj;
       try { obj = JSON.parse(decodeURIComponent(escape(atob(r.content)))); }
-      catch(e){ try { obj = JSON.parse(atob(r.content)); }catch(e2){ obj = { timeline:[], photos:[], notes:[], diary:[] }; } }
+      catch(e){ try { obj = JSON.parse(atob(r.content)); }catch(e2){ obj = { timeline:[], photos:[], notes:[], diary:[], foods:[] }; } }
       obj._sha = r.sha;
       return obj;
     }).catch(function(err){
@@ -518,7 +550,8 @@
       timeline: mergeArr(local.timeline, remote.timeline),
       photos: mergeArr(local.photos, remote.photos),
       notes: mergeArr(local.notes, remote.notes),
-      diary: mergeArr(local.diary, remote.diary)
+      diary: mergeArr(local.diary, remote.diary),
+      foods: mergeArr(local.foods, remote.foods)
     };
   }
 
@@ -566,7 +599,7 @@
     });
   }
   function localStateSnapshot(){
-    return { timeline: state.timeline, photos: state.photos, notes: state.notes, diary: state.diary };
+    return { timeline: state.timeline, photos: state.photos, notes: state.notes, diary: state.diary, foods: state.foods };
   }
 
   /* 应用合并结果到本地 */
@@ -575,9 +608,11 @@
     state.photos = merged.photos;
     state.notes = merged.notes;
     state.diary = merged.diary;
+    state.foods = merged.foods;
     save(LS.timeline, state.timeline);
     save(LS.notes, state.notes);
     save(LS.diary, state.diary);
+    save(LS.foods, state.foods);
     // photos 存元数据（不含 data 大字段）
     var meta = state.photos.map(function(p){ var c = {}; c.id = p.id; c.cap = p.cap || ""; c.path = p.path || ""; c.updatedAt = p.updatedAt || 0; return c; });
     save(LS.photos, meta);
@@ -642,6 +677,7 @@
     save(LS.timeline, state.timeline);
     save(LS.notes, state.notes);
     save(LS.diary, state.diary);
+    save(LS.foods, state.foods);
     var meta = state.photos.map(function(p){ return { id:p.id, cap:p.cap||"", path:p.path||"", updatedAt:p.updatedAt||0 }; });
     save(LS.photos, meta);
   }
@@ -773,7 +809,20 @@
     }).join("");
   }
 
-  function renderAll(){ renderTimeline(); renderGallery(); renderNotes(); renderDiary(); }
+  /* ---------- 渲染：今天吃什么 ---------- */
+  function renderFoods(){
+    var box = $("foodList");
+    if (!state.foods.length){
+      box.innerHTML = '<div class="empty">清单还空着——先输入一个想吃的吧（两个人的都会同步过来）</div>';
+      return;
+    }
+    var sorted = state.foods.slice().sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    box.innerHTML = sorted.map(function(f){
+      return '<span class="food-tag">' + esc(f.name) + '<button class="f-del" data-id="' + f.id + '" title="删除">✕</button></span>';
+    }).join("");
+  }
+
+  function renderAll(){ renderTimeline(); renderGallery(); renderNotes(); renderDiary(); renderFoods(); }
 
   /* ---------- 模态框 ---------- */
   var modal = $("modal");
@@ -904,6 +953,45 @@
     });
   });
 
+  /* ---------- 今天吃什么 ---------- */
+  function addFood(){
+    var input = $("foodInput");
+    var name = input.value.trim();
+    if (!name) { input.focus(); return; }
+    state.foods.unshift({ id:nid(), name:name, updatedAt:Date.now() });
+    input.value = "";
+    afterLocalChange();
+    renderFoods();
+  }
+  $("foodAddBtn").addEventListener("click", addFood);
+  $("foodInput").addEventListener("keydown", function(e){ if (e.key === "Enter") addFood(); });
+  $("foodPickBtn").addEventListener("click", function(){
+    var box = $("foodResult");
+    if (!state.foods.length){
+      box.textContent = "清单还是空的，先加几个想吃的吧～";
+      box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop");
+      return;
+    }
+    var names = state.foods.map(function(f){ return f.name; });
+    var finalIdx = Math.floor(Math.random() * names.length);
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced){
+      box.textContent = "就吃「" + names[finalIdx] + "」！";
+      box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop");
+      return;
+    }
+    var count = 0, total = Math.max(10, names.length * 4);
+    var timer = setInterval(function(){
+      box.textContent = "「" + names[Math.floor(Math.random() * names.length)] + "」";
+      count++;
+      if (count >= total){
+        clearInterval(timer);
+        box.textContent = "就吃「" + names[finalIdx] + "」！";
+        box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop");
+      }
+    }, 90);
+  });
+
   /* ---------- 删除委托 ---------- */
   document.addEventListener("click", function(e){
     var el;
@@ -924,6 +1012,10 @@
       var did = Number(el.getAttribute("data-id"));
       state.diary = state.diary.filter(function(d){ return d.id !== did; });
       afterLocalChange(); renderDiary();
+    } else if (el = e.target.closest(".f-del")){
+      var fid = Number(el.getAttribute("data-id"));
+      state.foods = state.foods.filter(function(f){ return f.id !== fid; });
+      afterLocalChange(); renderFoods();
     }
   });
 
