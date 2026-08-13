@@ -661,7 +661,11 @@
   function renderTimeline(){
     var box = $("timelineBox");
     if (!state.timeline.length){ box.innerHTML = '<div class="empty">还没有记录，点击右上角写下第一个故事吧</div>'; return; }
-    box.innerHTML = state.timeline.map(function(t){
+    var sorted = state.timeline.slice().sort(function(a, b){
+      var da = a.date || "9999-99-99", db = b.date || "9999-99-99";
+      return db.localeCompare(da) || ((b.updatedAt || 0) - (a.updatedAt || 0));
+    });
+    box.innerHTML = sorted.map(function(t){
       var dateStr = t.date ? t.date.replace(/-/g, ".") : "期待中";
       return (
         '<div class="t-item' + (t.future ? ' future' : '') + '">' +
@@ -731,7 +735,8 @@
   function renderNotes(){
     var box = $("notesBox");
     if (!state.notes.length){ box.innerHTML = '<div class="empty">墙上还空着，写一句想说的话吧</div>'; return; }
-    box.innerHTML = state.notes.map(function(n){
+    var sorted = state.notes.slice().sort(function(a, b){ return (b.updatedAt || 0) - (a.updatedAt || 0); });
+    box.innerHTML = sorted.map(function(n){
       return (
         '<div class="note">' +
           '<p>' + esc(n.text) + '</p>' +
