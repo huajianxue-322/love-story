@@ -662,7 +662,9 @@
     var box = $("timelineBox");
     if (!state.timeline.length){ box.innerHTML = '<div class="empty">还没有记录，点击右上角写下第一个故事吧</div>'; return; }
     var sorted = state.timeline.slice().sort(function(a, b){
-      var da = a.date || "9999-99-99", db = b.date || "9999-99-99";
+      var futureA = a.future || !a.date, futureB = b.future || !b.date;
+      if (futureA !== futureB) return futureA ? 1 : -1;
+      var da = a.date || "", db = b.date || "";
       return db.localeCompare(da) || ((b.updatedAt || 0) - (a.updatedAt || 0));
     });
     box.innerHTML = sorted.map(function(t){
