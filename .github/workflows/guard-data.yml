@@ -1,0 +1,18 @@
+name: Guard love data
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run cloud data guard
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python .github/guard_data.py
