@@ -6,21 +6,21 @@
 <title>夫垚 & 鋆曦 · 我们的恋爱手账</title>
 <style>
   :root{
-    --paper:#faf3e8;
-    --paper-2:#f4ead9;
-    --ink:#4a3728;
-    --ink-soft:#7d6655;
-    --ink-faint:#a8947f;
-    --rose:#d98080;
-    --rose-deep:#c25e63;
-    --coral:#d98e73;
-    --caramel:#c98a5e;
-    --sage:#9db39b;
-    --yellow:#f0c987;
-    --line:#e4d3bd;
-    --card:#fffdf8;
-    --shadow:0 2px 10px rgba(122,90,60,.10), 0 10px 30px rgba(122,90,60,.08);
-    --shadow-lift:0 6px 18px rgba(122,90,60,.16), 0 18px 44px rgba(122,90,60,.12);
+    --paper:#f0f2f5;
+    --paper-2:#e5e9ed;
+    --ink:#3d4a57;
+    --ink-soft:#66758a;
+    --ink-faint:#93a2b3;
+    --rose:#8ba3bd;
+    --rose-deep:#6e86a3;
+    --coral:#9fb0c4;
+    --caramel:#8fa5ba;
+    --sage:#a3b5a5;
+    --yellow:#d8c9a7;
+    --line:#d7dee6;
+    --card:#fcfdfe;
+    --shadow:0 2px 10px rgba(96,116,138,.10), 0 10px 30px rgba(96,116,138,.08);
+    --shadow-lift:0 6px 18px rgba(96,116,138,.16), 0 18px 44px rgba(96,116,138,.12);
     --radius:16px;
     --serif:"LXGW WenKai","Kaiti SC","STKaiti","KaiTi","楷体",serif;
     --sans:"LXGW WenKai","Kaiti SC","STKaiti","KaiTi","楷体","PingFang SC","Microsoft YaHei",sans-serif;
@@ -32,9 +32,9 @@
     font-family:var(--sans);
     color:var(--ink);
     background:
-      radial-gradient(circle at 12% 8%, rgba(217,128,128,.07), transparent 34%),
-      radial-gradient(circle at 88% 24%, rgba(157,179,155,.09), transparent 36%),
-      radial-gradient(circle at 70% 85%, rgba(217,142,115,.07), transparent 30%),
+      radial-gradient(circle at 12% 8%, rgba(139,163,189,.10), transparent 34%),
+      radial-gradient(circle at 88% 24%, rgba(163,181,165,.10), transparent 36%),
+      radial-gradient(circle at 70% 85%, rgba(216,201,167,.08), transparent 30%),
       var(--paper);
     line-height:1.8;
     min-height:100vh;
@@ -55,9 +55,9 @@
   }
   body::before{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.52 0 0 0 0 0.62 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  ::selection{background:rgba(217,128,128,.28)}
+  ::selection{background:rgba(139,163,189,.30)}
 
   .wrap{position:relative;z-index:1;max-width:1040px;margin:0 auto;padding:0 20px 90px}
 
@@ -93,7 +93,7 @@
   .counter::before{
     content:"";position:absolute;top:-13px;left:50%;transform:translateX(-50%) rotate(-2deg);
     width:150px;height:28px;
-    background:repeating-linear-gradient(90deg,rgba(217,128,128,.34) 0 12px,rgba(255,255,255,.75) 12px 22px);
+    background:repeating-linear-gradient(90deg,rgba(139,163,189,.38) 0 12px,rgba(255,255,255,.75) 12px 22px);
     opacity:.9;border-radius:3px;
   }
   .counter .big{
@@ -138,7 +138,7 @@
     padding:10px 22px;font-size:15px;font-family:var(--sans);
     cursor:pointer;transition:all .18s ease;min-height:44px;
   }
-  .btn:hover{background:var(--rose);color:#fff;transform:translateY(-1px);box-shadow:0 6px 16px rgba(194,94,99,.28)}
+  .btn:hover{background:var(--rose);color:#fff;transform:translateY(-1px);box-shadow:0 6px 16px rgba(110,134,163,.30)}
   .btn.solid{background:var(--rose-deep);border-color:var(--rose-deep);color:#fff}
   .btn.solid:hover{background:#a94c52}
   .btn.ghost{border-color:var(--line);color:var(--ink-soft);background:transparent}
@@ -154,7 +154,7 @@
   .t-item{position:relative;padding:0 0 30px 22px}
   .t-item::before{
     content:"";position:absolute;left:-31px;top:10px;width:14px;height:14px;border-radius:50%;
-    background:var(--card);border:3px solid var(--rose-deep);box-shadow:0 0 0 4px rgba(217,128,128,.18);
+    background:var(--card);border:3px solid var(--rose-deep);box-shadow:0 0 0 4px rgba(139,163,189,.20);
   }
   .t-item.future::before{border-color:var(--line);box-shadow:0 0 0 4px rgba(201,138,94,.12)}
   .t-card{
@@ -173,7 +173,7 @@
     transition:all .15s ease;opacity:0;
   }
   .t-card:hover .t-del{opacity:1}
-  .t-del:hover{background:rgba(217,128,128,.14);color:var(--rose-deep)}
+  .t-del:hover{background:rgba(139,163,189,.15);color:var(--rose-deep)}
 
   /* ---------- Gallery ---------- */
   .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:26px 20px}
@@ -210,14 +210,14 @@
     position:relative;box-shadow:var(--shadow);
     transform:rotate(var(--rot,0deg));transition:transform .2s ease,box-shadow .2s ease;
   }
-  .note:nth-child(3n+1){--rot:-2deg;background:#fdf3d8}
-  .note:nth-child(3n+2){--rot:1.4deg;background:#fbe4e2}
-  .note:nth-child(3n){--rot:-1deg;background:#e6efe4}
+  .note:nth-child(3n+1){--rot:-2deg;background:#e8edf2}
+  .note:nth-child(3n+2){--rot:1.4deg;background:#eae4f0}
+  .note:nth-child(3n){--rot:-1deg;background:#e4ece4}
   .note:hover{transform:rotate(0) scale(1.03);box-shadow:var(--shadow-lift);z-index:2}
   .note::before{
     content:"";position:absolute;top:-11px;left:50%;transform:translateX(-50%) rotate(-2deg);
-    width:86px;height:24px;background:repeating-linear-gradient(90deg,rgba(217,128,128,.38) 0 10px,rgba(255,255,255,.8) 10px 18px);
-    border-radius:2px;box-shadow:0 1px 3px rgba(122,90,60,.15);
+    width:86px;height:24px;background:repeating-linear-gradient(90deg,rgba(139,163,189,.42) 0 10px,rgba(255,255,255,.8) 10px 18px);
+    border-radius:2px;box-shadow:0 1px 3px rgba(96,116,138,.18);
   }
   .note p{font-size:14.5px;color:var(--ink);word-break:break-word;white-space:pre-wrap}
   .note .n-date{display:block;margin-top:12px;font-family:var(--num);font-size:11.5px;color:var(--ink-faint);font-style:italic;letter-spacing:.08em}
@@ -239,7 +239,7 @@
   .entry .e-mood-name{font-size:12.5px;color:var(--ink-faint);letter-spacing:.06em}
   .entry .e-body{padding:2px 18px 16px;font-size:14.5px;color:var(--ink);white-space:pre-wrap;word-break:break-word}
   .entry .e-del{align-self:flex-end;margin:0 10px 10px 0;border:none;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:13px;padding:6px 8px;border-radius:8px;transition:all .15s ease}
-  .entry .e-del:hover{background:rgba(217,128,128,.12);color:var(--rose-deep)}
+  .entry .e-del:hover{background:rgba(139,163,189,.14);color:var(--rose-deep)}
 
   /* ---------- Modal ---------- */
   dialog{
@@ -253,7 +253,7 @@
   .field{margin-bottom:16px}
   .field label{display:block;font-size:13.5px;color:var(--ink-soft);letter-spacing:.1em;margin-bottom:6px}
   .field input,.field textarea,.field select{
-    width:100%;border:1.5px solid var(--line);border-radius:10px;background:#fffdf8;
+    width:100%;border:1.5px solid var(--line);border-radius:10px;background:var(--card);
     padding:11px 14px;font-family:var(--sans);font-size:15px;color:var(--ink);
     outline:none;transition:border-color .15s ease;
   }
@@ -266,7 +266,7 @@
   .mood-opt .dot{width:16px;height:16px;border-radius:50%}
   .mood-opt span{font-size:12.5px;color:var(--ink-soft);letter-spacing:.06em}
   .mood-opt:hover{border-color:var(--rose)}
-  .mood-opt.sel{border-color:var(--rose-deep);background:rgba(217,128,128,.08)}
+  .mood-opt.sel{border-color:var(--rose-deep);background:rgba(139,163,189,.10)}
   .mood-opt.sel span{color:var(--rose-deep);font-weight:700}
 
   /* ---------- Lightbox ---------- */
@@ -287,7 +287,7 @@
   .food-list{display:flex;flex-wrap:wrap;gap:10px}
   .food-tag{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 10px 7px 16px;font-size:14.5px;color:var(--ink);box-shadow:var(--shadow)}
   .food-tag button{border:none;background:transparent;color:var(--ink-faint);cursor:pointer;font-size:13px;width:26px;height:26px;border-radius:50%;line-height:1}
-  .food-tag button:hover{background:rgba(217,128,128,.15);color:var(--rose-deep)}
+  .food-tag button:hover{background:rgba(139,163,189,.16);color:var(--rose-deep)}
 
   /* ---------- Footer ---------- */
   footer{margin-top:90px;text-align:center;color:var(--ink-faint);font-size:13.5px;letter-spacing:.14em}
@@ -497,11 +497,11 @@
 
   /* ---------- 恋爱计时 ---------- */
   var MOODS = {
-    happy:{ label:"开心", color:"#f2b8b0" },
-    sweet:{ label:"甜蜜", color:"#e89ab8" },
-    miss: { label:"想你", color:"#9db39b" },
-    calm: { label:"平淡", color:"#f0c987" },
-    sour: { label:"小别扭", color:"#c9c2b8" }
+    happy:{ label:"开心", color:"#a8c3dc" },
+    sweet:{ label:"甜蜜", color:"#c9a8c9" },
+    miss: { label:"想你", color:"#a3b5a5" },
+    calm: { label:"平淡", color:"#d8c9a7" },
+    sour: { label:"小别扭", color:"#b8bcc2" }
   };
 
   function tick(){
@@ -811,8 +811,8 @@
   /* ---------- 渲染：照片墙 ---------- */
   function placeholderSVG(i){
     var palettes = [
-      ['#f6d8c8','#d98e73'], ['#e6d9c4','#c9a87e'], ['#dccfc3','#a89888'],
-      ['#f3d4d4','#d98080'], ['#dce6d8','#9db39b'], ['#efe3c8','#d9b96a']
+      ['#d5e0ea','#8ba3bd'], ['#dcd6ea','#a69cc4'], ['#d8e2dc','#9fb0a8'],
+      ['#cfe0ee','#7d9cc4'], ['#e6e2d8','#b3a98e'], ['#d4e4e6','#88adb5']
     ];
     var p = palettes[i % palettes.length];
     return (
@@ -928,7 +928,7 @@
       '<div class="field"><p style="font-size:14px;color:var(--ink-soft);line-height:1.9">' + message + '</p></div>' +
       '<div class="modal-actions">' +
         '<button class="btn ghost" id="confirmNo">再想想</button>' +
-        '<button class="btn solid" id="confirmYes" style="background:var(--rose-deep);border-color:var(--rose-deep)">确定删除</button>' +
+        '<button class="btn solid" id="confirmYes" style="background:#b05a5a;border-color:#b05a5a">确定删除</button>' +
       '</div>'
     );
     $("confirmNo").addEventListener("click", function(){ closeModal(); });
