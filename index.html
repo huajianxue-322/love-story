@@ -294,25 +294,23 @@
   footer .heart{color:var(--rose);font-size:16px;display:inline-block;animation:pulse 1.6s ease-in-out infinite}
   @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
 
-  /* ---------- 花瓣飘落特效 ---------- */
-  .petal{
+  /* ---------- 雪花飘落特效 ---------- */
+  .snowflake{
     position:fixed;
-    top:-24px;
+    top:-14px;
     z-index:5;
     pointer-events:none;
-    background:linear-gradient(135deg,#f9d4dd,#f0a6bc);
-    border-radius:80% 20% 80% 20% / 60% 40% 60% 40%;
-    animation-name:petalFall;
+    background:#fff;
+    border-radius:50%;
+    box-shadow:0 0 8px rgba(255,255,255,.85), 0 0 2px rgba(255,255,255,.9);
+    animation-name:snowFall;
     animation-timing-function:linear;
     animation-iteration-count:infinite;
     will-change:transform;
-    box-shadow:inset -1px -1px 2px rgba(194,94,99,.18);
   }
-  .petal.alt{background:linear-gradient(135deg,#fbe7d4,#f3c9a8)}
-  .petal.alt2{background:linear-gradient(135deg,#efe3f5,#d9c2ea)}
-  @keyframes petalFall{
-    0%{transform:translate3d(0,-5vh,0) rotate(0deg)}
-    100%{transform:translate3d(var(--sway,20px),110vh,0) rotate(320deg)}
+  @keyframes snowFall{
+    0%{transform:translate3d(0,-4vh,0)}
+    100%{transform:translate3d(var(--sway,36px),108vh,0)}
   }
 
   @media (max-width:640px){
@@ -1213,31 +1211,30 @@
     });
   }
 
-  /* ---------- 花瓣飘落 ---------- */
-  function createPetals(){
+  /* ---------- 雪花飘落 ---------- */
+  function createSnow(){
     var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return;
-    var count = window.innerWidth < 640 ? 8 : 14;
-    var classes = ["petal", "petal alt", "petal alt2"];
+    var count = window.innerWidth < 640 ? 12 : 20;
     for (var i = 0; i < count; i++){
       var p = document.createElement("div");
-      p.className = classes[i % classes.length];
-      var size = 8 + Math.random() * 9;
-      p.style.width = size + "px";
-      p.style.height = (size * 0.72).toFixed(1) + "px";
+      p.className = "snowflake";
+      var size = 3 + Math.random() * 6;
+      p.style.width = size.toFixed(1) + "px";
+      p.style.height = size.toFixed(1) + "px";
       p.style.left = (Math.random() * 100).toFixed(1) + "vw";
-      p.style.opacity = (0.35 + Math.random() * 0.4).toFixed(2);
-      var dur = 9 + Math.random() * 8;
+      p.style.opacity = (0.35 + Math.random() * 0.5).toFixed(2);
+      var dur = 10 + Math.random() * 9;
       p.style.animationDuration = dur.toFixed(1) + "s";
       p.style.animationDelay = (-Math.random() * dur).toFixed(1) + "s";
-      p.style.setProperty("--sway", (Math.random() * 60 - 30).toFixed(0) + "px");
+      p.style.setProperty("--sway", (Math.random() * 70 - 35).toFixed(0) + "px");
       document.body.appendChild(p);
     }
   }
 
   /* ---------- 初始渲染 + 首次同步 ---------- */
   renderAll();
-  createPetals();
+  createSnow();
   if (!getToken()){
     setSync("err", "点击设置同步钥匙");
     showTokenSetup();
