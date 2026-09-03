@@ -329,8 +329,8 @@
   .food-tag button:hover{background:rgba(139,163,189,.16);color:var(--rose-deep)}
 
   /* ---------- 水彩小课堂 ---------- */
-  .wc-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px 28px;box-shadow:var(--shadow);position:relative}
-  .wc-card::after{
+  .wc-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 26px;box-shadow:var(--shadow);position:relative}
+  .wc-item::after{
     content:"";position:absolute;top:-12px;right:26px;transform:rotate(3deg);
     width:110px;height:26px;
     background:repeating-linear-gradient(90deg,rgba(139,163,189,.35) 0 10px,rgba(255,255,255,.8) 10px 18px);
@@ -421,13 +421,10 @@
     <div class="sec-head">
       <span class="no">01</span><h2>水彩小课堂</h2><span class="rule"></span>
     </div>
-    <div class="wc-card">
-      <div class="wc-palette">
-        <i style="background:#8ba3bd"></i><i style="background:#c9a8c9"></i><i style="background:#a3b5a5"></i><i style="background:#d8c9a7"></i><i style="background:#b05a5a"></i>
-      </div>
-      <div class="wc-date" id="wcDate"></div>
-      <div class="wc-tip" id="wcTip">每天一条水彩小技巧，正在加载…</div>
-      <div class="wc-note">— 今日水彩小课堂 · 明天见 —</div>
+    <div class="lesson-tip">每天一条水彩小技巧，慢慢练，慢慢画 ❄</div>
+    <div class="lesson-tabs" id="wcTabs"></div>
+    <div class="lessons" id="wcBox">
+      <div class="empty">正在加载水彩技巧…</div>
     </div>
   </section>
   <!-- ============ TIMELINE ============ -->
@@ -821,7 +818,7 @@
       }).then(function(){ applyMerged(merged); });
     }).then(function(){
       setSync("ok", "已同步 " + timeStr() + "（点击刷新）");
-      loadWatercolorTip();
+      renderWatercolor();
       syncing = false;
     }).catch(function(err){
       lastSyncAuthError = !!(err && err.message && err.message.indexOf("401") >= 0);
@@ -994,23 +991,57 @@
     }).join("");
   }
 
-  /* ---------- 水彩小课堂：读云端 love-data/tips.json 显示最新一条 ---------- */
-  function loadWatercolorTip(){
-    var dateEl = $("wcDate"), tipEl = $("wcTip");
-    if (!getToken()) return;
-    ghGet("love-data/tips.json").then(function(r){
-      var obj = null;
-      try { obj = JSON.parse(decodeURIComponent(escape(atob(r.content)))); }
-      catch(e){ try { obj = JSON.parse(atob(r.content)); }catch(e2){ obj = null; } }
-      var tips = (obj && obj.tips) || [];
-      if (!tips.length) return;
-      var latest = tips[tips.length - 1];
-      if (latest.date){
-        var d = String(latest.date).replace(/-/g, ".");
-        dateEl.textContent = "「" + d + "」的水彩小技巧";
-      }
-      if (latest.tip) tipEl.textContent = latest.tip;
-    }).catch(function(){});
+  /* ---------- 水彩小课堂：数字切换查看每日技巧（❄ 标最新） ---------- */
+  function renderWatercolor(){
+    var box = $("wcBox");
+    var tabs = $("wcTabs");
+    fetch("love-data/tips.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function(r){ if (!r.ok) throw new Error("http " + r.status); return r.json(); })
+      .then(function(data){
+        var tips = (data && data.tips) || [];
+        if (!tips.length){
+          box.innerHTML = '<div class="empty">水彩技巧还没开始，明天见 ✨</div>';
+          tabs.innerHTML = "";
+          return;
+        }
+        var latestIdx = tips.length - 1;
+        // 渲染所有卡片（默认显示最新一条）
+        box.innerHTML = tips.map(function(t, i){
+          var d = String(t.date || "").replace(/-/g, ".");
+          return '<div class="wc-item" data-i="' + i + '"' + (i === latestIdx ? "" : ' style="display:none"') + '>' +
+            '<div class="wc-palette">' +
+              '<i style="background:#8ba3bd"></i><i style="background:#c9a8c9"></i><i style="background:#a3b5a5"></i>' +
+              '<i style="background:#d8c9a7"></i><i style="background:#b05a5a"></i>' +
+            '</div>' +
+            (d ? '<div class="wc-date">「' + esc(d) + '」的水彩小技巧</div>' : "") +
+            '<div class="wc-tip">' + esc(t.tip || "") + '</div>' +
+          '</div>';
+        }).join("");
+        // 数字按钮（1,2,3…），最新一条上标 ❄
+        tabs.innerHTML = tips.map(function(t, i){
+          var isNew = i === latestIdx;
+          return '<button class="lesson-tab' + (isNew ? " active" : "") + '" data-i="' + i + '"' +
+            ' title="第 ' + (i + 1) + ' 条' + (isNew ? "（最新）" : "") + '">' +
+            (i + 1) + (isNew ? '<span class="tab-new">❄</span>' : "") + '</button>';
+        }).join("");
+        // 点击切换
+        var buttons = tabs.querySelectorAll(".lesson-tab");
+        Array.prototype.forEach.call(buttons, function(btn){
+          btn.addEventListener("click", function(){
+            var i = btn.getAttribute("data-i");
+            Array.prototype.forEach.call(buttons, function(b){ b.classList.remove("active"); });
+            btn.classList.add("active");
+            var cards = box.querySelectorAll(".wc-item");
+            Array.prototype.forEach.call(cards, function(c){
+              c.style.display = (c.getAttribute("data-i") === i) ? "" : "none";
+            });
+          });
+        });
+      })
+      .catch(function(){
+        box.innerHTML = '<div class="empty">水彩技巧加载失败（需联网）</div>';
+        tabs.innerHTML = "";
+      });
   }
 
   function renderAll(){ renderTimeline(); renderGallery(); renderNotes(); renderDiary(); renderFoods(); }
@@ -1409,6 +1440,7 @@
   /* ---------- 初始渲染 + 首次同步 ---------- */
   renderAll();
   renderLessons();
+  renderWatercolor();
   createSnow();
   if (!getToken()){
     setSync("err", "点击设置同步钥匙");
