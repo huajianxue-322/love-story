@@ -342,6 +342,19 @@
   .wc-tip{font-size:15.5px;color:var(--ink);line-height:2.05;letter-spacing:.02em}
   .wc-note{margin-top:14px;font-size:12px;color:var(--ink-faint);letter-spacing:.14em;text-align:right}
 
+  /* ---------- AI 词典 ---------- */
+  .gloss-search{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+  .gloss-search input{flex:1;border:1.5px solid var(--line);border-radius:999px;background:var(--card);padding:11px 20px;font-family:var(--sans);font-size:15px;color:var(--ink);outline:none;min-height:44px}
+  .gloss-search input:focus{border-color:var(--rose)}
+  .gloss-count{font-size:12.5px;color:var(--ink-faint);letter-spacing:.08em;white-space:nowrap}
+  .gloss-group{margin-bottom:26px}
+  .gloss-group h3{font-family:var(--serif);font-size:16px;color:var(--rose-deep);letter-spacing:.12em;margin-bottom:10px;padding-left:2px}
+  .gloss-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-bottom:8px;box-shadow:var(--shadow)}
+  .gloss-item .g-term{font-weight:700;color:var(--ink);font-size:15px}
+  .gloss-item .g-plain{color:var(--ink-soft);font-size:14px;margin-top:3px}
+  .gloss-item .g-analogy{color:var(--ink-faint);font-size:13px;margin-top:4px}
+  .gloss-item .g-analogy::before{content:"👉 "}
+
   /* ---------- Footer ---------- */
   footer{margin-top:90px;text-align:center;color:var(--ink-faint);font-size:13.5px;letter-spacing:.14em}
   footer .heart{color:var(--rose);font-size:16px;display:inline-block;animation:pulse 1.6s ease-in-out infinite}
@@ -483,6 +496,19 @@
   </section>
 
 
+
+  <!-- ============ AI GLOSSARY ============ -->
+  <section id="glossary">
+    <div class="sec-head">
+      <span class="no">07</span><h2>AI 词典</h2><span class="rule"></span>
+    </div>
+    <div class="lesson-tip">遇到不懂的词，来这里查一查 📖</div>
+    <div class="gloss-search">
+      <input type="text" id="glossInput" placeholder="搜索术语，比如：Token / RAG / 幻觉 / MCP…" autocomplete="off">
+      <span class="gloss-count" id="glossCount"></span>
+    </div>
+    <div class="gloss-box" id="glossBox"></div>
+  </section>
 
   <footer>
     <span class="heart">♥</span> 把平凡的日子，过成我们喜欢的样子 <span class="heart">♥</span><br>
@@ -1044,6 +1070,102 @@
       });
   }
 
+  /* ---------- AI 词典数据 + 渲染 ---------- */
+  var GLOSSARY = [
+    { g:"① 基础概念", items:[
+      { t:"大模型 LLM", p:"会说人话的 AI 大脑", a:"一个读过海量书的实习生" },
+      { t:"参数 / 7B·70B", p:"模型的「脑容量」大小，B = 十亿个参数", a:"书的厚度：越厚装的知识越多" },
+      { t:"Token", p:"AI 认字的「字块」，也是计费单位（中文 1 字约 1~2 个）", a:"按字数收费的短信" },
+      { t:"上下文窗口", p:"AI 一次能看多少材料，超出部分它看不见", a:"办公桌大小，桌子小放不下长文" },
+      { t:"提示词 Prompt", p:"你给 AI 的指令", a:"给实习生下的任务单" },
+      { t:"提示词工程", p:"把任务单写清楚的技巧（角色+任务+格式+禁区）", a:"把要求写具体，别只说「帮帮忙」" },
+      { t:"训练 vs 推理", p:"训练=上学学知识；推理=学完后答题", a:"学生上学 vs 学生考试" },
+      { t:"微调 Fine-tuning", p:"给 AI 补课，改它的习惯和风格", a:"培训新员工熟悉你们学校的规矩" },
+      { t:"多模态", p:"能看图、听音、读 PDF，不只会认字", a:"不只会读字，还能看图说话" }
+    ]},
+    { g:"② 使用工具", items:[
+      { t:"API", p:"AI 的「服务窗口」，程序之间对接的通道", a:"餐厅外带窗口，不是堂食" },
+      { t:"API Key", p:"进这个窗口的钥匙，按使用量计费", a:"门禁卡，丢了要换" },
+      { t:"系统提示词", p:"后台预设给 AI 的「员工手册」", a:"上岗前发给员工的行为准则" },
+      { t:"上下文 Context", p:"这次对话里 AI 记得的内容", a:"开会时白板上写的东西" },
+      { t:"会话 Session", p:"一次完整的聊天，散会容易忘", a:"一次会议" },
+      { t:"流式输出", p:"答案一个字一个字蹦出来", a:"边想边说，不是憋完才说" }
+    ]},
+    { g:"③ Agent 智能体", items:[
+      { t:"Agent（智能体）", p:"会自己干活的 AI 助理", a:"有脑子又有手的员工" },
+      { t:"工具调用 Tool Calling", p:"AI「伸手」去查资料、跑程序、改文件", a:"让助理去档案室查文件" },
+      { t:"记忆 Memory", p:"长期记住你的偏好和规范", a:"助理的随身笔记本" },
+      { t:"技能 Skill", p:"把一套流程写成说明书，下次照做", a:"SOP 标准操作手册" },
+      { t:"工作流 Workflow", p:"多个步骤连成流水线", a:"流水线作业" },
+      { t:"MCP", p:"让 AI 接各种外部工具的「通用插头」", a:"USB 接口，什么设备都能插" }
+    ]},
+    { g:"④ 风险与评估", items:[
+      { t:"幻觉 Hallucination", p:"AI 一本正经地说不存在或错误的内容", a:"不懂装懂还说得特别像" },
+      { t:"提示注入 Prompt Injection", p:"文字/网页里偷偷藏指令骗 AI", a:"简历里写「请录用我」骗 HR" },
+      { t:"基准测试 Benchmark", p:"模型的「考试排名」", a:"联考成绩单，只作参考" },
+      { t:"RAG", p:"先翻资料再回答", a:"开卷考试" },
+      { t:"温度 Temperature", p:"随机性旋钮：调低更稳，调高更发散", a:"AI 的「胆子」旋钮" }
+    ]},
+    { g:"⑤ 进阶·训练", items:[
+      { t:"预训练 Pre-training", p:"用海量数据打基础，学会语言规律", a:"上小学，什么都先学一点" },
+      { t:"SFT 监督微调", p:"用「标准问答」教它怎么回答", a:"老师手把手给示范题" },
+      { t:"RLHF 人类反馈强化学习", p:"人类给回答打分，模型照着学", a:"老师批改作业后调整教法" },
+      { t:"数据标注", p:"给数据贴标签（这是好答案/坏答案）", a:"给练习册标参考答案" },
+      { t:"语料库 Corpus", p:"训练用的一大堆文本材料", a:"题库+教材+参考书的总和" },
+      { t:"蒸馏 Distillation", p:"大模型教小模型，让小模型也变聪明", a:"名师带徒弟" }
+    ]},
+    { g:"⑥ 进阶·推理优化", items:[
+      { t:"量化 Quantization", p:"压缩模型体积，换取更省显存、更快", a:"把大部头教材缩写成精华版" },
+      { t:"KV 缓存", p:"把刚才算过的结果记下来，下次直接用", a:"草稿纸上留下中间步骤" },
+      { t:"批处理 Batching", p:"一次处理多条请求，提高效率", a:"攒一堆卷子一起改" },
+      { t:"显存 VRAM", p:"显卡自己的内存，模型要住进去", a:"显卡的办公桌，桌子不够大跑不动" }
+    ]},
+    { g:"⑦ 进阶·检索与提示", items:[
+      { t:"向量数据库", p:"按「意思相近」找资料的仓库", a:"按内容而不是标题找书" },
+      { t:"Embedding 向量化", p:"把文字变成一串数字坐标，方便比相似度", a:"给每句话装上 GPS 坐标" },
+      { t:"分块 Chunk", p:"把长文切成小段再检索，避免超出窗口", a:"把整本书拆成卡片" },
+      { t:"召回率", p:"该找到的资料，实际找到了多少", a:"检索考试的命中率" },
+      { t:"思维链 CoT", p:"让 AI 一步一步写出思考过程再给答案", a:"要求学生写解题步骤" },
+      { t:"Few-shot / Zero-shot", p:"Few-shot=给几个例子；Zero-shot=不给例子直接问", a:"给例题 vs 直接考" }
+    ]},
+    { g:"⑧ 进阶·生成与安全", items:[
+      { t:"扩散模型 Diffusion", p:"从随机噪点一点点「画」出图像", a:"从一团雾里慢慢显出画" },
+      { t:"LoRA", p:"只改一小部分参数的轻量微调，成本低", a:"只给学生补弱项，不重学全科" },
+      { t:"ControlNet", p:"控制生成图像的构图、姿势、线条", a:"给画师一张草图照着画" },
+      { t:"种子 Seed", p:"生成结果的「配方编号」，同种子可复现", a:"同一份菜谱做出同一道菜" },
+      { t:"对齐 Alignment", p:"让 AI 的行为符合人类价值观和安全要求", a:"给员工做职业道德培训" },
+      { t:"越狱 Jailbreak", p:"用话术骗 AI 绕过安全限制", a:"钻规则漏洞" },
+      { t:"红队测试", p:"专门扮演攻击者找 AI 的漏洞", a:"请外校老师来挑你们试卷的毛病" },
+      { t:"护栏 Guardrails", p:"给 AI 设的安全围栏，防止越界输出", a:"围栏和安全带" },
+      { t:"GPU", p:"显卡，AI 算力主要靠它", a:"AI 的发动机" },
+      { t:"多智能体", p:"多个 AI 分工协作完成复杂任务", a:"一个项目组，各司其职" },
+      { t:"上下文压缩", p:"对话太长时，把前面的内容压缩成摘要", a:"会议纪要：把两小时浓缩成一页" }
+    ]}
+  ];
+  function renderGlossary(kw){
+    kw = String(kw || "").toLowerCase().trim();
+    var box = $("glossBox");
+    var total = 0;
+    var html = GLOSSARY.map(function(group){
+      var items = group.items.filter(function(it){
+        if (!kw) return true;
+        return (it.t + " " + it.p + " " + it.a).toLowerCase().indexOf(kw) >= 0;
+      });
+      if (!items.length) return "";
+      total += items.length;
+      return '<div class="gloss-group"><h3>' + esc(group.g) + '</h3>' +
+        items.map(function(it){
+          return '<div class="gloss-item">' +
+            '<div class="g-term">' + esc(it.t) + '</div>' +
+            '<div class="g-plain">' + esc(it.p) + '</div>' +
+            '<div class="g-analogy">' + esc(it.a) + '</div>' +
+          '</div>';
+        }).join("") + '</div>';
+    }).join("");
+    box.innerHTML = html || '<div class="empty">没找到这个词，换个说法试试～</div>';
+    $("glossCount").textContent = total + " 个词条";
+  }
+
   function renderAll(){ renderTimeline(); renderGallery(); renderNotes(); renderDiary(); renderFoods(); }
 
   /* ---------- 渲染：每日一课（课程正文为轻量 markdown：**加粗**、空行分段） ---------- */
@@ -1441,6 +1563,8 @@
   renderAll();
   renderLessons();
   renderWatercolor();
+  renderGlossary("");
+  $("glossInput").addEventListener("input", function(){ renderGlossary(this.value); });
   createSnow();
   if (!getToken()){
     setSync("err", "点击设置同步钥匙");
